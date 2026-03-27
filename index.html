@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Визуализатор преобразований Фурье</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="images/24favicon.svg">
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span>Преобразование Фурье</span>
+        </h1>
+        <div class="subtitle">
+            Интерактивное введение в то, как разложить что угодно на синусоиды
+        </div>
+
+        <section class="section">
+            <h2 class="section-title">
+                <img src="images/01flag.svg" alt="Question" class="section-icon">
+                <span>Так что же это такое?</span>
+            </h2>
+            
+            <div class="explanation">
+                <p>Простыми словами, <strong>преобразование Фурье</strong> — это способ разделения чего-либо на кучу синусоид. Как обычно, название происходит от некоего давным-давно жившего человека, которого звали Фурье.</p>
+            </div>
+
+            <div class="visualization-container">
+                <h3 class="section-subtitle">
+                    <img src="images/02waves.svg" alt="Waves" class="subsection-icon">
+                    <span>Простые волны</span>
+                </h3>
+                <p>Давайте начнём с простых примеров. Вот волна, которая состоит из двух синусоид:</p>
+                
+                <canvas id="simpleWaveCanvas" width="800" height="200"></canvas>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="simpleWaveFreq1">1</div>
+                        <div class="stat-label">Частота 1 (Гц)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="simpleWaveFreq2">3</div>
+                        <div class="stat-label">Частота 2 (Гц)</div>
+                    </div>
+                </div>
+
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Частота 1: <span id="freq1Value">1</span> Гц</span>
+                    </div>
+                    <input type="range" id="freq1Slider" min="0.5" max="5" value="1" step="0.1">
+                    
+                    <div class="slider-label" style="margin-top: 15px;">
+                        <span>Частота 2: <span id="freq2Value">3</span> Гц</span>
+                    </div>
+                    <input type="range" id="freq2Slider" min="0.5" max="5" value="3" step="0.1">
+                </div>
+
+                <p class="note">
+                    <img src="images/03star.svg" alt="Pointer" class="inline-icon-small">
+                    Этот волнообразный паттерн можно разделить на синусоиды. Сложите две синусоиды выше — и получите исходную волну!
+                </p>
+            </div>
+
+            <div class="visualization-container">
+                <h3 class="section-subtitle">
+                    <img src="images/04rectangle.svg" alt="Square Wave" class="subsection-icon">
+                    <span>Меандр (прямоугольная волна)</span>
+                </h3>
+                <p>А теперь посмотрим на меандр. Он не похож на синусоиду, но тоже раскладывается на них!</p>
+                
+                <canvas id="squareWaveCanvas" width="800" height="300"></canvas>
+                
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Количество синусоид: <span id="harmonicCount">5</span></span>
+                    </div>
+                    <input type="range" id="harmonicSlider" min="1" max="20" value="5" step="1">
+                </div>
+
+                <div class="info-box">
+                    <strong>
+                        <img src="images/23question.svg" alt="Idea" class="inline-icon">
+                        <span>Как это работает:</span>
+                    </strong> Меандр раскладывается в ряд Фурье. Чем больше синусоид мы добавляем, тем точнее приближение. Первые две синусоиды дают основной вклад, а остальные сглаживают углы.
+                </div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="usedHarmonics">5</div>
+                        <div class="stat-label">Используется гармоник</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="maxHarmonics">20</div>
+                        <div class="stat-label">Максимум</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="visualization-container">
+                <h3 class="section-subtitle">
+                    <img src="images/06pencil.svg" alt="Draw" class="subsection-icon">
+                    <span>Нарисуйте свою волну!</span>
+                </h3>
+                <p>Рисуйте синим в верхней части — разложение появится красным снизу. Чем насыщеннее красный, тем больше гармоник:</p>
+                
+                <canvas id="drawWaveCanvas" width="800" height="400"></canvas>
+                
+                <div class="controls">
+                    <button class="btn-secondary" id="clearWaveBtn">
+                        <img src="images/16eraser.svg" alt="Clear" class="button-icon">
+                        Очистить
+                    </button>
+                </div>
+
+                <div class="preset-buttons">
+                    <button class="preset-btn" data-wave="square">Прямоугольник</button>
+                    <button class="preset-btn" data-wave="saw">Пила</button>
+                    <button class="preset-btn" data-wave="sine">Синусоида</button>
+                    <button class="preset-btn" data-wave="triangle">Треугольник</button>
+                    <button class="preset-btn" data-wave="noise">Шум</button>
+                </div>
+
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>
+                            <img src="images/10waves.svg" alt="Slider" class="inline-icon-small">
+                            Гармоники: <span id="drawHarmonicCount">5</span>
+                        </span>
+                    </div>
+                    <input type="range" id="drawHarmonicSlider" min="1" max="30" value="5" step="1">
+                </div>
+
+                <div class="info-box" style="background: #e8f4fd; border-left-color: #3a5f8f;">
+                    <strong>
+                        <img src="images/23question.svg" alt="Target" class="inline-icon">
+                        <span>Как это работает:</span>
+                    </strong> 
+                    <ul style="margin-top: 8px; margin-left: 20px;">
+                        <li>
+                            <img src="images/07original.svg" alt="Original" class="inline-icon-small">
+                            <span style="color: #3a5f8f; font-weight: bold;">Оригинал</span> — синяя линия, ваша нарисованная кривая (рисуйте только вверху)
+                        </li>
+                        <li>
+                            <img src="images/08decomposition.svg" alt="Decomposition" class="inline-icon-small">
+                            <span style="color: #ff0000; font-weight: bold;">Разложение</span> — красные линии, разложение на синусоиды (чем насыщеннее, тем больше гармоник)
+                        </li>
+                        <li>Чем больше гармоник, тем точнее повторяется оригинал</li>
+                    </ul>
+                </div>
+
+                <p class="note">
+                    <img src="images/03star.svg" alt="Pointer" class="inline-icon-small">
+                    Попробуйте нарисовать что-нибудь и двигайте ползунок — красные линии будут меняться от светлых к темным!
+                </p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">
+                <img src="images/11epicycles.svg" alt="Epicycles" class="section-icon">
+                <span>Эпициклы</span>
+            </h2>
+            
+            <div class="explanation">
+                <p>А теперь самое интересное! Если использовать не простые синусоиды, а 3D-спирали, мы можем рисовать любые фигуры с помощью вращающихся кругов. Сбоку это выглядит как синусоиды, а спереди — как круги.</p>
+            </div>
+
+            <div class="two-column">
+                <div class="column">
+                    <h4>
+                        <img src="images/12ontheside.svg" alt="Side View" class="inline-icon">
+                        Вид сбоку (синусоида)
+                    </h4>
+                    <canvas id="sideViewCanvas" width="380" height="200"></canvas>
+                </div>
+                <div class="column">
+                    <h4>
+                        <img src="images/13atthefront.svg" alt="Front View" class="inline-icon">
+                        Вид спереди (круг)
+                    </h4>
+                    <canvas id="frontViewCanvas" width="380" height="200"></canvas>
+                </div>
+            </div>
+
+            <div class="visualization-container">
+                <h3 class="section-subtitle">
+                    <img src="images/06pencil.svg" alt="Draw" class="subsection-icon">
+                    <span>Рисуем эпициклами</span>
+                </h3>
+                <p>Рисуйте синим любую фигуру, и красные полупрозрачные круги повторят её!</p>
+                
+                <canvas id="epicycleCanvas" width="800" height="500"></canvas>
+                
+                <div class="controls">
+                    <button class="btn-primary" id="startEpicyclesBtn">
+                        <img src="images/14start.svg" alt="Start" class="button-icon">
+                        Запустить эпициклы
+                    </button>
+                    <button class="btn-secondary" id="stopEpicyclesBtn">
+                        <img src="images/15stop.svg" alt="Stop" class="button-icon">
+                        Стоп
+                    </button>
+                    <button class="btn-secondary" id="clearEpicyclesBtn">
+                        <img src="images/16eraser.svg" alt="Clear" class="button-icon">
+                        Очистить
+                    </button>
+                </div>
+
+                <div class="preset-buttons">
+                    <button class="preset-btn" data-epicycle="star">Звезда</button>
+                    <button class="preset-btn" data-epicycle="circle">Круг</button>
+                    <button class="preset-btn" data-epicycle="square">Квадрат</button>
+                    <button class="preset-btn" data-epicycle="triangle">Треугольник</button>
+                </div>
+
+                <div class="slider-container">
+                    <div class="slider-label" style="margin-top: 15px;">
+                        <span>Скорость анимации: <span id="speedValue">1.0x</span></span>
+                    </div>
+                    <input type="range" id="speedSlider" min="0.2" max="2.5" value="1.0" step="0.1">
+                </div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="pointCount">0</div>
+                        <div class="stat-label">Точек в рисунке</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="epicycleHarmonics">10</div>
+                        <div class="stat-label">Используется кругов</div>
+                    </div>
+                </div>
+
+                <div class="info-box" style="background: #fff0f0; border-left-color: #ff3333;">
+                    <strong>
+                        <img src="images/03star.svg" alt="Magic" class="inline-icon">
+                        <span>Как это работает:</span>
+                    </strong> 
+                    <ul style="margin-top: 8px; margin-left: 20px;">
+                        <li>
+                            <img src="images/07original.svg" alt="Original" class="inline-icon-small">
+                            <span style="color: #3a5f8f; font-weight: bold;">Оригинал</span> — синяя линия, ваша нарисованная фигура
+                        </li>
+                        <li>
+                            <img src="images/08decomposition.svg" alt="Decomposition" class="inline-icon-small">
+                            <span style="color: #ff3333; font-weight: bold;">Разложение</span> — красные круги (эпициклы), чем больше круг, тем важнее гармоника
+                        </li>
+                        <li><span style="color: #ff0000; font-weight: bold;">Ярко-красная точка</span> — текущее положение</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">
+                <img src="images/17use.svg" alt="Applications" class="section-icon">
+                <span>Где это используется в реальной жизни?</span>
+            </h2>
+            
+            <div class="explanation">
+                <p>Преобразование Фурье — это не просто красивая математическая абстракция. Оно окружает нас повсюду в современных технологиях. Вот несколько простых примеров:</p>
+            </div>
+
+            <div class="two-column">
+                <div class="column">
+                    <h4>
+                        <img src="images/18music.svg" alt="Music" class="inline-icon">
+                        <span>Сжатие музыки (MP3)</span>
+                    </h4>
+                    <p>Когда ты слушаешь музыку в формате MP3, компьютер не хранит звук "как есть". Вместо этого он раскладывает его на синусоиды и отбрасывает те частоты, которые человеческое ухо почти не слышит. Файл становится в 10 раз меньше, а звук для нас звучит почти так же.</p>
+                </div>
+                <div class="column">
+                    <h4>
+                        <img src="images/19photo.svg" alt="JPEG" class="inline-icon">
+                        <span>Сжатие фото (JPEG)</span>
+                    </h4>
+                    <p>Формат JPEG работает хитро: он режет картинку на маленькие квадратики и каждый раскладывает на двумерные синусоиды. Самые важные волны оставляет, а мелкие детали (которые глаз не замечает) выбрасывает. Именно из-за этого на сильно сжатых фото появляются знакомые "квадратики".</p>
+                </div>
+            </div>
+
+            <div class="two-column">
+                <div class="column">
+                    <h4>
+                        <img src="images/20signal.svg" alt="Satellite" class="inline-icon">
+                        <span>Обработка сигналов</span>
+                    </h4>
+                    <p>Спутники, Wi-Fi и сотовая связь используют преобразование Фурье, чтобы "нанизывать" множество разговоров на одну волну, а на другом конце — аккуратно разделять их обратно.</p>
+                </div>
+                <div class="column">
+                    <h4>
+                        <img src="images/21medicine.svg" alt="MRI" class="inline-icon">
+                        <span>Медицина (МРТ)</span>
+                    </h4>
+                    <p>Аппараты МРТ не фотографируют вас напрямую. Они измеряют отклики тканей на магнитное поле, а специальный компьютер с помощью Фурье-преобразования "собирает" из этих данных четкое изображение ваших органов.</p>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>
+                    <img src="images/22pin.svg" alt="Science" class="inline-icon">
+                    <span>Простыми словами:</span>
+                </strong> Преобразование Фурье позволяет нам разобрать любой сложный сигнал (звук, картинку, радиоволну) на простые составляющие. Это как разобрать сложный механизм на простые детали — удобно и для ремонта, и для понимания, и для хранения в чемодане поменьше.
+            </div>
+        </section>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/simpleWave.js"></script>
+    <script src="js/squareWave.js"></script>
+    <script src="js/drawWave.js"></script>
+    <script src="js/spiralViews.js"></script>
+    <script src="js/epicycles.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+</html>
