@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     SimpleWave.init();
     SquareWave.init();
     DrawWave.init();
+    DrawWaveByAccuracy.init();
     SpiralViews.init();
     Epicycles.init();
 });

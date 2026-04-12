@@ -70,5 +70,84 @@ const Utils = {
         }
         
         return newPoints.slice(0, targetCount);
+    },
+
+    /** Односторонний спектр вещественного сигнала (без дублирования пар k и N−k). Коэффициенты AC отсортированы по убыванию амплитуды. */
+    computeDFT(signal) {
+        const N = signal.length;
+        let mean = 0;
+        for (let n = 0; n < N; n++) mean += signal[n];
+        mean /= N;
+        const dc = { re: mean, im: 0, freq: 0, amp: Math.abs(mean) };
+        const ac = [];
+
+        if (N % 2 === 0) {
+            for (let k = 1; k < N / 2; k++) {
+                let re = 0, im = 0;
+                for (let n = 0; n < N; n++) {
+                    const angle = (2 * Math.PI * k * n) / N;
+                    re += signal[n] * Math.cos(angle);
+                    im -= signal[n] * Math.sin(angle);
+                }
+                re = (2 * re) / N;
+                im = (2 * im) / N;
+                ac.push({ re, im, freq: k, amp: Math.sqrt(re * re + im * im) });
+            }
+            let reNyq = 0;
+            for (let n = 0; n < N; n++) {
+                reNyq += signal[n] * Math.cos(Math.PI * n);
+            }
+            reNyq /= N;
+            ac.push({ re: reNyq, im: 0, freq: N / 2, amp: Math.abs(reNyq) });
+        } else {
+            for (let k = 1; k <= (N - 1) / 2; k++) {
+                let re = 0, im = 0;
+                for (let n = 0; n < N; n++) {
+                    const angle = (2 * Math.PI * k * n) / N;
+                    re += signal[n] * Math.cos(angle);
+                    im -= signal[n] * Math.sin(angle);
+                }
+                re = (2 * re) / N;
+                im = (2 * im) / N;
+                ac.push({ re, im, freq: k, amp: Math.sqrt(re * re + im * im) });
+            }
+        }
+
+        ac.sort((a, b) => b.amp - a.amp);
+        return [dc, ...ac];
+    },
+
+    reconstruct(coeffs, N, harmonicsCount, t) {
+        let sum = 0;
+        for (let i = 0; i < Math.min(harmonicsCount + 1, coeffs.length); i++) {
+            const c = coeffs[i];
+            if (c.freq === 0) {
+                sum += c.re;
+            } else if (N % 2 === 0 && c.freq === N / 2) {
+                sum += c.re * Math.cos(Math.PI * t);
+            } else {
+                const angle = (2 * Math.PI * c.freq * t) / N;
+                sum += c.re * Math.cos(angle) - c.im * Math.sin(angle);
+            }
+        }
+        return sum;
+    },
+
+    /** Доля объяснённой дисперсии (R²) для восстановления с заданным числом гармоник (как в визуализаторе рисования). */
+    computeR2(signalY, coeffs, harmonicsCount) {
+        const N = signalY.length;
+        const meanY = signalY.reduce((a, b) => a + b, 0) / N;
+        let sse = 0;
+        let sst = 0;
+        for (let i = 0; i < N; i++) {
+            const recon = Utils.reconstruct(coeffs, N, harmonicsCount, i);
+            const d = signalY[i] - recon;
+            sse += d * d;
+            const c = signalY[i] - meanY;
+            sst += c * c;
+        }
+        let r2 = 1;
+        if (sst > 1e-12) r2 = 1 - sse / sst;
+        return Math.max(0, Math.min(1, r2));
     }
 };
