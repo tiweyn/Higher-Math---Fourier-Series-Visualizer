@@ -8,29 +8,49 @@ const DrawWave = (function() {
     let lastDrawTime = 0;
     const DRAW_THROTTLE = 16;
     
+    /** Односторонний спектр вещественного сигнала (без дублирования пар k и N−k). */
     function computeDFT(signal) {
         const N = signal.length;
-        const coeffs = [];
-        
         let mean = 0;
         for (let n = 0; n < N; n++) mean += signal[n];
         mean /= N;
-        coeffs.push({ re: mean, im: 0, freq: 0, amp: Math.abs(mean) });
+        const dc = { re: mean, im: 0, freq: 0, amp: Math.abs(mean) };
+        const ac = [];
         
-        for (let k = 1; k < N; k++) {
-            let re = 0, im = 0;
-            for (let n = 0; n < N; n++) {
-                const angle = (2 * Math.PI * k * n) / N;
-                re += signal[n] * Math.cos(angle);
-                im -= signal[n] * Math.sin(angle);
+        if (N % 2 === 0) {
+            for (let k = 1; k < N / 2; k++) {
+                let re = 0, im = 0;
+                for (let n = 0; n < N; n++) {
+                    const angle = (2 * Math.PI * k * n) / N;
+                    re += signal[n] * Math.cos(angle);
+                    im -= signal[n] * Math.sin(angle);
+                }
+                re = (2 * re) / N;
+                im = (2 * im) / N;
+                ac.push({ re, im, freq: k, amp: Math.sqrt(re * re + im * im) });
             }
-            re = (2 * re) / N;
-            im = (2 * im) / N;
-            const amp = Math.sqrt(re*re + im*im);
-            coeffs.push({ re, im, freq: k, amp });
+            let reNyq = 0;
+            for (let n = 0; n < N; n++) {
+                reNyq += signal[n] * Math.cos(Math.PI * n);
+            }
+            reNyq /= N;
+            ac.push({ re: reNyq, im: 0, freq: N / 2, amp: Math.abs(reNyq) });
+        } else {
+            for (let k = 1; k <= (N - 1) / 2; k++) {
+                let re = 0, im = 0;
+                for (let n = 0; n < N; n++) {
+                    const angle = (2 * Math.PI * k * n) / N;
+                    re += signal[n] * Math.cos(angle);
+                    im -= signal[n] * Math.sin(angle);
+                }
+                re = (2 * re) / N;
+                im = (2 * im) / N;
+                ac.push({ re, im, freq: k, amp: Math.sqrt(re * re + im * im) });
+            }
         }
         
-        return coeffs.sort((a, b) => b.amp - a.amp);
+        ac.sort((a, b) => b.amp - a.amp);
+        return [dc, ...ac];
     }
     
     function reconstruct(coeffs, N, harmonicsCount, t) {
@@ -40,13 +60,45 @@ const DrawWave = (function() {
             const c = coeffs[i];
             if (c.freq === 0) {
                 sum += c.re;
+            } else if (N % 2 === 0 && c.freq === N / 2) {
+                sum += c.re * Math.cos(Math.PI * t);
             } else {
                 const angle = (2 * Math.PI * c.freq * t) / N;
-                sum += c.re * Math.cos(angle) + c.im * Math.sin(angle);
+                sum += c.re * Math.cos(angle) - c.im * Math.sin(angle);
             }
         }
         
         return sum;
+    }
+    
+    /** Доля объяснённой дисперсии (R²) между оригиналом и восстановлением тем же числом членов, что и на графике. */
+    function updateAccuracyLabel() {
+        const harmonics = parseInt(document.getElementById('drawHarmonicSlider').value, 10);
+        document.getElementById('drawHarmonicCount').textContent = String(harmonics);
+        const accEl = document.getElementById('drawAccuracy');
+        if (!accEl) return;
+        if (wavePoints.length < 5) {
+            accEl.textContent = '—';
+            return;
+        }
+        const resampled = Utils.resamplePoints(wavePoints, 200);
+        const N = resampled.length;
+        const signalY = resampled.map(p => p.y);
+        const coeffs = computeDFT(signalY);
+        const meanY = signalY.reduce((a, b) => a + b, 0) / N;
+        let sse = 0;
+        let sst = 0;
+        for (let i = 0; i < N; i++) {
+            const recon = reconstruct(coeffs, N, harmonics, i);
+            const d = signalY[i] - recon;
+            sse += d * d;
+            const c = signalY[i] - meanY;
+            sst += c * c;
+        }
+        let r2 = 1;
+        if (sst > 1e-12) r2 = 1 - sse / sst;
+        r2 = Math.max(0, Math.min(1, r2));
+        accEl.textContent = `${Math.round(r2 * 100)}%`;
     }
     
     function drawBackground() {
@@ -93,7 +145,10 @@ const DrawWave = (function() {
         // Рисуем сетку поверх фона
         Utils.drawGrid(ctx, canvas.width, canvas.height, '#d0d0d0');
         
-        if (wavePoints.length < 5) return;
+        if (wavePoints.length < 5) {
+            updateAccuracyLabel();
+            return;
+        }
         
         const resampled = Utils.resamplePoints(wavePoints, 200);
         const N = resampled.length;
@@ -160,6 +215,8 @@ const DrawWave = (function() {
         ctx.fillStyle = '#666';
         ctx.fillText('Меньше гармоник', legendX, legendY - 15);
         ctx.fillText('Больше гармоник', legendX + legendWidth - 70, legendY - 15);
+        
+        updateAccuracyLabel();
     }
     
     function initCanvas() {
@@ -185,6 +242,7 @@ const DrawWave = (function() {
         
         Utils.drawGrid(ctx, canvas.width, canvas.height, '#d0d0d0');
         wavePoints = [];
+        updateAccuracyLabel();
     }
     
     function init() {
@@ -272,8 +330,8 @@ const DrawWave = (function() {
             });
         });
         
-        document.getElementById('drawHarmonicSlider').addEventListener('input', (e) => {
-            document.getElementById('drawHarmonicCount').textContent = e.target.value;
+        document.getElementById('drawHarmonicSlider').addEventListener('input', () => {
+            updateAccuracyLabel();
             if (wavePoints.length > 0) redraw();
         });
     }

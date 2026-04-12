@@ -6,9 +6,4 @@ document.addEventListener('DOMContentLoaded', () => {
     DrawWave.init();
     SpiralViews.init();
     Epicycles.init();
-    
-    // Обновляем отображение счетчиков
-    document.getElementById('drawHarmonicSlider').addEventListener('input', (e) => {
-        document.getElementById('drawHarmonicCount').textContent = e.target.value;
-    });
 });
